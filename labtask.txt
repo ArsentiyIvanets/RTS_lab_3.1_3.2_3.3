@@ -1,0 +1,138 @@
+from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.popup import Popup
+from kivy.core.window import Window
+from kivy.properties import ObjectProperty
+
+from time import time
+
+from Lab_01a.euclidean_factorization import EuclideanAlgorithm
+from Lab_01a.fermat_factorization import FermatAlgorithm
+
+
+on_time = -1
+gcd_pointer = 0
+factorization_pointer = 0
+
+
+class PopupMessage(Popup):
+    message_text = ''
+
+    def __init__(self, **kwargs):
+        self.message_text = kwargs['message_text']
+        kwargs.pop('message_text')
+        super().__init__(**kwargs)
+
+
+class CountGCDWindow(Screen):
+    input_a = ObjectProperty()
+    input_b = ObjectProperty()
+    label_answer = ObjectProperty()
+
+    def insert_text(self, a, b):
+        self.input_a.text = str(a)
+        self.input_b.text = str(b)
+
+    def filter_values(self):
+        if self.input_a.text.isdigit() and self.input_b.text.isdigit():
+            return int(self.input_a.text), int(self.input_b.text)
+        else:
+            PopupMessage(title='Ошибка!',
+                         message_text='Вы ввели неверные значения!\nМожно указать только натуральные числа').open()
+            self.insert_text(1, 1)
+            return 1, 1
+
+    def count_gcd(self):
+        global on_time, gcd_pointer
+        gcd = EuclideanAlgorithm(*self.filter_values())
+        if gcd_pointer == 0:
+            gcd = gcd.gcd_rest
+        elif gcd_pointer == 2:
+            gcd = gcd.gcd_difference
+        else:
+            gcd = gcd.gcd_recursion
+        try:
+            start = time()
+            gcd = gcd()
+            end = time()
+            if on_time == 1:
+                PopupMessage(title='Время', message_text='Посчитано за {}с'.format(end - start)).open()
+            self.label_answer.text = str(gcd)
+        except Exception as e:
+            PopupMessage(title='Ошибка!', message_text=str(e)).open()
+
+
+class CountFactorizationWindow(Screen):
+    input_n = ObjectProperty()
+    label_answer = ObjectProperty()
+
+    def insert_text(self, text):
+        self.input_n.text = str(text)
+
+    def filter_values(self):
+        if self.input_n.text.isdigit() and int(self.input_n.text) > 1:
+            return int(self.input_n.text)
+        else:
+            PopupMessage(title='Ошибка!',
+                         message_text='Вы ввели неверное значения!\n'
+                                      'Можно указать только натуральное число больше 1').open()
+            self.insert_text(2)
+            return 2
+
+    def count_factorization(self):
+        global on_time, factorization_pointer
+        if factorization_pointer == 0:
+            factorization = EuclideanAlgorithm(self.filter_values())
+        else:
+            factorization = FermatAlgorithm(self.filter_values())
+        try:
+            start = time()
+            factorization.full_factorization()
+            end = time()
+            if on_time == 1:
+                PopupMessage(title='Время', message_text='Посчитано за {}с'.format(end - start)).open()
+            self.label_answer.text = str(factorization.get_result())[1:-1]
+        except Exception as e:
+            PopupMessage(title='Ошибка!', message_text=str(e)).open()
+
+
+class MoreAbilitiesWindow(Screen):
+    pass
+
+
+class ConfigurationWindow(Screen):
+
+    @staticmethod
+    def set_on_time():
+        global on_time
+        on_time *= -1
+
+    @staticmethod
+    def get_gcd_checkbox(pointer):
+        global gcd_pointer
+        gcd_pointer = pointer
+
+    @staticmethod
+    def get_factorization_checkbox(pointer):
+        global factorization_pointer
+        factorization_pointer = pointer
+
+
+class MainWindow(Screen):
+    Window.clearcolor = (1, 1, 1, 0)
+
+
+class FactorizationApp(App):
+    def build(self):
+        screen_structure = ScreenManager()
+        screen_structure.add_widget(MainWindow(name='main'))
+        screen_structure.add_widget(ConfigurationWindow(name='config'))
+        screen_structure.add_widget(CountGCDWindow(name='gcd'))
+        screen_structure.add_widget(CountFactorizationWindow(name='factorization'))
+        screen_structure.add_widget(MoreAbilitiesWindow(name='more'))
+
+        return screen_structure
+
+
+if __name__ == '__main__':
+    FactorizationApp().run()
